@@ -1,13 +1,22 @@
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import StartApp.Simple exposing (start)
 
-main =
-  StartApp.Simple.start
-    { model = 0
+import Effects exposing (Effects, Never)
+import Task exposing (..)
+
+import StartApp exposing (start)
+
+port counter : Signal Model
+
+signals = [Signal.map SetCounter counter]
+
+app =
+  StartApp.start
+    { init = init
     , update = update
     , view = view
+    , inputs = signals
     }
 
 main =
@@ -20,18 +29,25 @@ port tasks = app.tasks
 
 type alias Model = Int
 
-init : Int -> Model
-init count = count
+init : (Model, Effects Action)
+init = (0, Effects.none)
 
 -- UPDATE
 
-type Action = Increment | Decrement
+type Action =
+    Increment
+    | Decrement
+    | SetCounter Int
 
-update : Action -> Model -> Model
+update : Action -> Model -> (Model, Effects Action)
 update action model =
-  case action of
-    Increment -> model + 1
-    Decrement -> model - 1
+  let
+    newModel = case action of
+        Increment -> model + 1
+        Decrement -> model - 1
+        SetCounter value -> value
+  in
+    (newModel, Effects.none)
 
 -- VIEW
 
@@ -42,11 +58,6 @@ view address model =
     , div [ countStyle ] [ text (toString model) ]
     , button [ onClick address Increment ] [ text "+" ]
     ]
-
-type alias Context =
-    { actions : Signal.Address Action
-    , remove : Signal.Address ()
-    }
 
 countStyle : Attribute
 countStyle =
