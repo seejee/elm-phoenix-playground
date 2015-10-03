@@ -1,3 +1,4 @@
+import Phoenix exposing (foo)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -30,7 +31,7 @@ port tasks = app.tasks
 type alias Model = Int
 
 init : (Model, Effects Action)
-init = (0, Effects.none)
+init = (foo, Effects.none)
 
 -- UPDATE
 
@@ -41,13 +42,10 @@ type Action =
 
 update : Action -> Model -> (Model, Effects Action)
 update action model =
-  let
-    newModel = case action of
-        Increment -> model + 1
-        Decrement -> model - 1
-        SetCounter value -> value
-  in
-    (newModel, Effects.none)
+    case action of
+        Increment -> (model + 1, Effects.none)
+        Decrement -> (model - 1, Effects.none)
+        SetCounter value -> (value, Effects.none)
 
 -- VIEW
 
