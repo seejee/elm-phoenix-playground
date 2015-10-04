@@ -1,4 +1,4 @@
-import Phoenix exposing (foo)
+import Phoenix exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -31,18 +31,20 @@ port tasks = app.tasks
 type alias Model = Int
 
 init : (Model, Effects Action)
-init = (foo, Effects.none)
+init = (0, connect)
 
 -- UPDATE
 
 type Action =
-    Increment
+    Connected (Maybe Socket)
+    | Increment
     | Decrement
     | SetCounter Int
 
 update : Action -> Model -> (Model, Effects Action)
 update action model =
     case action of
+        Connected socket -> (model + 17, Effects.none)
         Increment -> (model + 1, Effects.none)
         Decrement -> (model - 1, Effects.none)
         SetCounter value -> (value, Effects.none)
@@ -66,3 +68,12 @@ countStyle =
     , ("width", "50px")
     , ("text-align", "center")
     ]
+
+-- Effects
+
+connect : Effects Action
+connect =
+    Phoenix.connect "/socket"
+    |> Task.toMaybe
+    |> Task.map Connected
+    |> Effects.task
