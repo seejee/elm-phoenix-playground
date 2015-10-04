@@ -8,35 +8,34 @@ import Task exposing (..)
 
 import StartApp exposing (start)
 
-port counter : Signal Model
-
-signals = [Signal.map SetCounter counter]
-
 app =
   StartApp.start
     { init = init
     , update = update
     , view = view
-    , inputs = signals
+    , inputs = [Signal.map (\message -> SetCounter message.value) newCounter]
     }
 
 main =
   app.html
 
-port tasks : Signal (Task.Task Never ())
-port tasks = app.tasks
-
 -- MODEL
 
-type alias Model = Int
+type alias Model =
+    { counter: Int
+    , socket: Maybe Socket
+    }
 
 init : (Model, Effects Action)
-init = (0, connect)
+init = (
+    { counter = 0, socket = Nothing }
+    , connect)
 
 -- UPDATE
 
 type Action =
     Connected (Maybe Socket)
+    | Joined (Maybe Channel)
     | Increment
     | Decrement
     | SetCounter Int
@@ -44,10 +43,24 @@ type Action =
 update : Action -> Model -> (Model, Effects Action)
 update action model =
     case action of
-        Connected socket -> (model + 17, Effects.none)
-        Increment -> (model + 1, Effects.none)
-        Decrement -> (model - 1, Effects.none)
-        SetCounter value -> (value, Effects.none)
+        Connected maybeSocket ->
+            case maybeSocket of
+                Just socket ->
+                    ({ model | socket  <- maybeSocket }, (join socket))
+                Nothing ->
+                    ({ model | counter <- -1 }, Effects.none)
+
+        Joined maybeChannel ->
+            ({model | counter <- model.counter + 1}, Effects.none)
+
+        Increment ->
+            ({model | counter <- model.counter + 1}, Effects.none)
+
+        Decrement ->
+            ({model | counter <- model.counter - 1}, Effects.none)
+
+        SetCounter value ->
+            ({model | counter <- value}, Effects.none)
 
 -- VIEW
 
@@ -55,7 +68,7 @@ view : Signal.Address Action -> Model -> Html
 view address model =
   div []
     [ button [ onClick address Decrement ] [ text "-" ]
-    , div [ countStyle ] [ text (toString model) ]
+    , div [ countStyle ] [ text (toString model.counter) ]
     , button [ onClick address Increment ] [ text "+" ]
     ]
 
@@ -69,7 +82,22 @@ countStyle =
     , ("text-align", "center")
     ]
 
+-- Ports
+
+port tasks : Signal (Task.Task Never ())
+port tasks = app.tasks
+
+type alias NewCounterMessage = { value: Int }
+
+port newCounter : Signal NewCounterMessage
+
 -- Effects
+
+channelSpec : ChannelSpec Action
+channelSpec = {
+    name = "counter"
+    , subscriptions = [ { event = "new_counter", portName = "newCounter"} ]
+    }
 
 connect : Effects Action
 connect =
@@ -77,3 +105,11 @@ connect =
     |> Task.toMaybe
     |> Task.map Connected
     |> Effects.task
+
+join : Socket -> Effects Action
+join socket =
+    Phoenix.join socket (channelSpec)
+    |> Task.toMaybe
+    |> Task.map Joined
+    |> Effects.task
+
