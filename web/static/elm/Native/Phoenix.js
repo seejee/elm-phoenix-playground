@@ -30,9 +30,16 @@ Elm.Native.Phoenix.make = function(localRuntime) {
       return channel;
   }
 
-  function on(event, address, channel) {
+  function on(event, portSignal, channel) {
+      var match = portSignal.name.match("port-([a-zA-Z]+)")
+
+      if(match === null || match.length === 0)
+        throw Error("The incoming signal for '" + event + "' must be a port.");
+
+      var port = match[1]
+
       channel.on(event, function(payload) {
-        Task.perform(address._0(payload));
+        localRuntime.ports[port].send(payload);
       });
 
       return channel;

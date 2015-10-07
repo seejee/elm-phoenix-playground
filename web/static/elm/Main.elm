@@ -84,21 +84,20 @@ countStyle =
 port tasks : Signal (Task.Task Never ())
 port tasks = app.tasks
 
-type alias NewCounterMessage = { value: Int }
+port newCounter : Signal NewCounterMessage
 
-newCounterMailbox : Signal.Mailbox NewCounterMessage
-newCounterMailbox = Signal.mailbox { value = 1 }
+type alias NewCounterMessage = { value: Int }
 
 setCounterFromServer : Signal Action
 setCounterFromServer =
-    Signal.map (\message -> SetCounter message.value) newCounterMailbox.signal
+    Signal.map (\message -> SetCounter message.value) newCounter
 
 -- Effects
 
 channel : Socket -> Task x Channel
 channel socket =
     Phoenix.channel "counter" socket
-    |> Phoenix.on "new_counter" newCounterMailbox.address
+    |> Phoenix.on "new_counter" newCounter
     |> Phoenix.join
 
 join : Effects Action

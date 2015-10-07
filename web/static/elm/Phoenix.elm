@@ -15,8 +15,8 @@ connect url = Native.Phoenix.connect url Nothing
 channel : ChannelSpec -> Socket -> Channel
 channel spec socket = Native.Phoenix.channel spec socket
 
-on : String -> Signal.Address message -> Channel -> Channel
-on event address channel = Native.Phoenix.on event address channel
+on : String -> Signal message -> Channel -> Channel
+on event portSignal channel = Native.Phoenix.on event portSignal channel
 
 join : Channel -> Task.Task x Channel
 join channel = Native.Phoenix.join channel
