@@ -86,13 +86,13 @@ port tasks = app.tasks
 
 port newCounter : Signal NewCounterMessage
 
+-- Channel Stuff
+
 type alias NewCounterMessage = { value: Int }
 
 setCounterFromServer : Signal Action
 setCounterFromServer =
     Signal.map (\message -> SetCounter message.value) newCounter
-
--- Effects
 
 channel : Socket -> Task x Channel
 channel socket =
