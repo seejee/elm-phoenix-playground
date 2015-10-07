@@ -13,7 +13,7 @@ app =
     { init = init
     , update = update
     , view = view
-    , inputs = [Signal.map (\message -> SetCounter message.value) newCounter]
+    , inputs = [setCounterFromServer]
     }
 
 main =
@@ -23,13 +23,13 @@ main =
 
 type alias Model =
     { counter: Int
-    , socket: Maybe Socket
+    , channel: Maybe Channel
     }
 
 init : (Model, Effects Action)
 init = (
-    { counter = 0, socket = Nothing }
-    , connect)
+    { counter = 0, channel = Nothing }
+    , join)
 
 -- UPDATE
 
@@ -43,15 +43,12 @@ type Action =
 update : Action -> Model -> (Model, Effects Action)
 update action model =
     case action of
-        Connected maybeSocket ->
-            case maybeSocket of
-                Just socket ->
-                    ({ model | socket  <- maybeSocket }, (join socket))
+        Joined maybeChannel ->
+            case maybeChannel of
+                Just channel ->
+                    ({ model | channel  <- maybeChannel }, Effects.none)
                 Nothing ->
                     ({ model | counter <- -1 }, Effects.none)
-
-        Joined maybeChannel ->
-            ({model | counter <- model.counter + 1}, Effects.none)
 
         Increment ->
             ({model | counter <- model.counter + 1}, Effects.none)
@@ -89,27 +86,27 @@ port tasks = app.tasks
 
 type alias NewCounterMessage = { value: Int }
 
-port newCounter : Signal NewCounterMessage
+newCounterMailbox : Signal.Mailbox NewCounterMessage
+newCounterMailbox = Signal.mailbox { value = 1 }
+
+setCounterFromServer : Signal Action
+setCounterFromServer =
+    Signal.map (\message -> SetCounter message.value) newCounterMailbox.signal
 
 -- Effects
 
-channelSpec : ChannelSpec Action
-channelSpec = {
-    name = "counter"
-    , subscriptions = [ { event = "new_counter", portName = "newCounter"} ]
-    }
+channelSpec : ChannelSpec
+channelSpec = "counter"
 
-connect : Effects Action
-connect =
+join : Effects Action
+join =
     Phoenix.connect "/socket"
-    |> Task.toMaybe
-    |> Task.map Connected
-    |> Effects.task
-
-join : Socket -> Effects Action
-join socket =
-    Phoenix.join socket (channelSpec)
+    `andThen`
+    Phoenix.channel (channelSpec)
+    `andThen`
+    Phoenix.on { event = "new_counter", address = newCounterMailbox.address }
+    `andThen`
+    Phoenix.join
     |> Task.toMaybe
     |> Task.map Joined
     |> Effects.task
-

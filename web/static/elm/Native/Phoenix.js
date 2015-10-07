@@ -9,7 +9,6 @@ Elm.Native.Phoenix.make = function(localRuntime) {
 
   var Task   = Elm.Native.Task.make(localRuntime);
   var Signal = Elm.Native.Signal.make(localRuntime);
-
   var Socket = require("phoenix").Socket;
 
   function connect(url, options) {
@@ -26,19 +25,25 @@ Elm.Native.Phoenix.make = function(localRuntime) {
     });
   }
 
-  function join(socket, spec) {
+  function channel(name, socket) {
     return Task.asyncFunction(function(callback){
-      var channel = socket.channel(spec.name)
+      var channel = socket.channel(name);
+      callback(Task.succeed(channel));
+    });
+  }
 
-      //wat?
-      var sub = spec.subscriptions._0
-      console.log(sub, 1);
-
-      // signals? ports? tasks? shrug
+  function on(sub, channel) {
+    return Task.asyncFunction(function(callback){
       channel.on(sub.event, function(payload) {
-        localRuntime.ports[sub.portName].send(payload);
+        Task.perform(sub.address._0(payload));
       });
 
+      callback(Task.succeed(channel));
+    })
+  }
+
+  function join(channel) {
+    return Task.asyncFunction(function(callback){
       channel.join()
         .receive("ok", function(response) {
           callback(Task.succeed(channel));
@@ -51,7 +56,9 @@ Elm.Native.Phoenix.make = function(localRuntime) {
 
   return localRuntime.Native.Phoenix.values = {
     connect: F2(connect),
-    join:    F2(join)
+    channel: F2(channel),
+    on:      F2(on),
+    join:    join,
   };
 };
 
