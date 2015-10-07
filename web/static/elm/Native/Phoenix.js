@@ -32,10 +32,10 @@ Elm.Native.Phoenix.make = function(localRuntime) {
     });
   }
 
-  function on(sub, channel) {
+  function on(event, address, channel) {
     return Task.asyncFunction(function(callback){
-      channel.on(sub.event, function(payload) {
-        Task.perform(sub.address._0(payload));
+      channel.on(event, function(payload) {
+        Task.perform(address._0(payload));
       });
 
       callback(Task.succeed(channel));
@@ -57,7 +57,7 @@ Elm.Native.Phoenix.make = function(localRuntime) {
   return localRuntime.Native.Phoenix.values = {
     connect: F2(connect),
     channel: F2(channel),
-    on:      F2(on),
+    on:      F3(on),
     join:    join,
   };
 };

@@ -95,16 +95,13 @@ setCounterFromServer =
 
 -- Effects
 
-channelSpec : ChannelSpec
-channelSpec = "counter"
-
 join : Effects Action
 join =
     Phoenix.connect "/socket"
     `andThen`
-    Phoenix.channel (channelSpec)
+    Phoenix.channel "counter"
     `andThen`
-    Phoenix.on { event = "new_counter", address = newCounterMailbox.address }
+    Phoenix.on "new_counter" newCounterMailbox.address
     `andThen`
     Phoenix.join
     |> Task.toMaybe
